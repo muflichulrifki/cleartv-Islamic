@@ -15,6 +15,9 @@ import android.graphics.Shader;
  * unit square and stretched onto each shape, so drawing allocates nothing.
  */
 final class GlassRim {
+    /** The Islamic theme's gold (HomePrayerCard.GOLD): a bright shine at two corners, gold all the way round like the cards. */
+    static final int GOLD_SHINE = 0xF2E9CB7E, GOLD_FAINT = 0x80E9CB7E;
+
 
     final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Matrix matrix = new Matrix();

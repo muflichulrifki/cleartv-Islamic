@@ -32,7 +32,7 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
         this.density = density;
         // Same glass as the top-bar pills (GlassDrawable): an even veil and a shining edge.
         band.setColor(0x12FFFFFF);
-        edge = new GlassRim(1.5f * density, 0xD9FFFFFF, 0x1AFFFFFF, 0.5f);
+        edge = new GlassRim(2f * density, GlassRim.GOLD_SHINE, GlassRim.GOLD_FAINT, 0.5f);
     }
 
     /** The focus shape: the tray's glass would hide it, so the tray paints it over the glass itself. */

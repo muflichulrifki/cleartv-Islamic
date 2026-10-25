@@ -934,7 +934,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         final String where = placeName != null ? placeCountry : "";
         int color = adapter.ambientColorAt(position);
         heroBottom = dockTopInRoot - HERO_GAP_DP * density;
-        if (verse != null) verse.place(dockTopInRoot - 14 * density, belowPrayerCard());
+        // The dock's tray reaches about 8dp above the tiles (DockDecoration); leave a clear gap above it.
+        if (verse != null) verse.place(dockTopInRoot - 32 * density, belowPrayerCard());
         final float y = Math.max(heroBottom - heroShelf.getHeight(), belowPrayerCard());
         boolean changed = !label.contentEquals(heroName.getText());
 

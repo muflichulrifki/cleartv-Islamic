@@ -24,7 +24,7 @@ public class GlassView extends View {
         density = getResources().getDisplayMetrics().density;
         radius = 20f * density;
         // The same shining edge as the top-bar pills (GlassDrawable), at the same width.
-        rim = new GlassRim(1.5f * density, 0xD9FFFFFF, 0x1AFFFFFF);
+        rim = new GlassRim(2f * density, GlassRim.GOLD_SHINE, GlassRim.GOLD_FAINT);
         // Cache the slab as a texture. The spring only changes translation, so the GPU can
         // move it without replaying clipPath and the glow on every frame. That path is
         // software-rendered on the MT5895 and is what makes the highlight crawl.
