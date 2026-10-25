@@ -99,7 +99,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     /** How much of the space between the side paddings the top shelf may use. */
     private static final float HERO_WIDTH_SHARE = 0.40f;
     /** The name is one line, and may run wider than the description, up to this share. */
-    private static final float HERO_NAME_WIDTH_SHARE = 0.60f;
+    private static final float HERO_NAME_WIDTH_SHARE = 0.50f;
     private static final float HERO_TITLE_MAX_SP = 40f;
     /** The breathing room between the shelf's last line and the top of the app container. */
     private static final float HERO_GAP_DP = 67f;
@@ -130,7 +130,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private TextView shamsiDate;
     private boolean shamsi;
     /** Today's prayer times under the clock (PrayerTimes); hidden while prayerZone is empty. */
-    private TextView prayerRow;
+    private android.widget.LinearLayout prayerRow;
+    private HomePrayerCard prayerCard;
+    /** A verse of the Quran at the right above the dock, with an Islamic theme (prayer_zone). */
+    private HomeVerse verse;
     private String prayerZone;
     private boolean prayerRefreshRunning;
     /** The azan over Home at prayer times; null when the theme turns it off or has no prayer_zone. */
@@ -307,7 +310,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // bottom edge: every time it is measured, its top is worked out again. Positioning it by
         // the height it happened to have beforehand is what let a tall block run into the dock.
         heroShelf.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, orr, ob) -> {
-            if (heroBottom > 0) v.setY(heroBottom - v.getHeight());
+            if (heroBottom > 0) v.setY(Math.max(heroBottom - v.getHeight(), belowPrayerCard()));
         });
         btnWifi = findViewById(R.id.btnWifi);
         if (!cfg.showNetworkPill) btnWifi.setVisibility(View.GONE);
@@ -320,6 +323,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             date.setPadding(0, (int) (4 * density), 0, 0);
         }
         prayerRow = findViewById(R.id.prayerRow);
+        prayerCard = new HomePrayerCard(prayerRow);
+        if (!cfg.prayerZone.isEmpty()) {
+            android.widget.FrameLayout rootFrame = findViewById(R.id.root);
+            verse = new HomeVerse(rootFrame, rootFrame.indexOfChild(heroShelf) + 1, Math.round(heroMaxWidth * 1.125f));
+        }
         prayerZone = cfg.prayerZone;
         if (cfg.azan && !prayerZone.isEmpty()) {
             azan = new Azan(root, () -> {
@@ -822,6 +830,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     protected void onDestroy() {
         super.onDestroy();
         wallDecoder.shutdownNow();
+        if (verse != null) verse.stop();
         ConnectivityManager cm = getSystemService(ConnectivityManager.class);
         TvInputManager tim = (TvInputManager) getSystemService(TV_INPUT_SERVICE);
         if (tim != null) tim.unregisterCallback(inputCallback);
@@ -908,6 +917,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     // ---- top shelf -------------------------------------------------------------------------------
 
+    /** The lowest the shelf may start: under the prayer card when it shows, so the two never overlap. */
+    private float belowPrayerCard() {
+        if (prayerRow == null || prayerRow.getVisibility() != View.VISIBLE || prayerRow.getHeight() == 0) return 0f;
+        int[] card = new int[2], parent = new int[2];
+        prayerRow.getLocationInWindow(card);
+        ((View) heroShelf.getParent()).getLocationInWindow(parent);
+        return card[1] - parent[1] + prayerRow.getHeight() + 16 * density;
+    }
+
     private void showHero(int position, float dockTopInRoot) {
         // The place the picture is of, when there is one; the app's own name is the fallback for
         // the user's own wallpapers, which carry no title.
@@ -916,7 +934,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         final String where = placeName != null ? placeCountry : "";
         int color = adapter.ambientColorAt(position);
         heroBottom = dockTopInRoot - HERO_GAP_DP * density;
-        float y = heroBottom - heroShelf.getHeight();
+        if (verse != null) verse.place(dockTopInRoot - 18 * density, belowPrayerCard());
+        final float y = Math.max(heroBottom - heroShelf.getHeight(), belowPrayerCard());
         boolean changed = !label.contentEquals(heroName.getText());
 
         if (reducedMotion) {
@@ -1552,27 +1571,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             left = 24 * 60 - nowMin + (tomorrow != null ? tomorrow : today).minutes[0];
         }
         boolean is24 = android.text.format.DateFormat.is24HourFormat(this);
-        int bright = 0xFFFFFFFF, dim = 0x80FFFFFF;
-        android.text.SpannableStringBuilder b = new android.text.SpannableStringBuilder();
-        if (!today.hijri.isEmpty()) {
-            b.append(today.hijri);
-            b.setSpan(new android.text.style.ForegroundColorSpan(dim), 0, b.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            b.append("     ");
-        }
-        for (int i = 0; i < today.minutes.length; i++) {
-            if (i > 0) b.append("    ");
-            int start = b.length();
-            b.append(PrayerTimes.names(prayerZone)[i]).append("  ").append(PrayerTimes.format(today.minutes[i], is24));
-            if (i == next) {
-                b.setSpan(new android.text.style.ForegroundColorSpan(bright), start, b.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                b.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD), start, b.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            }
-        }
-        b.append("     ");
-        int start = b.length();
-        b.append(PrayerTimes.names(prayerZone)[next >= 0 ? next : 0]).append(" ").append(PrayerTimes.countdown(left));
-        b.setSpan(new android.text.style.ForegroundColorSpan(bright), start, b.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        prayerRow.setText(b);
+        String[] names = PrayerTimes.names(prayerZone);
+        prayerCard.bind(names, today.minutes, today.hijri, next,
+                PrayerTimes.countdown(prayerZone, names[next >= 0 ? next : 0], left), is24);
         prayerRow.setVisibility(View.VISIBLE);
     }
 

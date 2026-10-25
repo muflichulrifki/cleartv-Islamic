@@ -53,6 +53,15 @@ public class PrayerTimesTest {
     }
 
     @Test
+    public void countsDownInIndonesian() {
+        String id = "ID:Jawa Timur:Kab. Sidoarjo";
+        assertEquals("Maghrib 44 menit lagi", PrayerTimes.countdown(id, "Maghrib", 44));
+        assertEquals("Isya 1 jam 5 menit lagi", PrayerTimes.countdown(id, "Isya", 65));
+        assertEquals("Subuh 9 jam lagi", PrayerTimes.countdown(id, "Subuh", 540));
+        assertEquals("Maghrib dalam 12 min", PrayerTimes.countdown("TRG04", "Maghrib", 12));
+    }
+
+    @Test
     public void findsTheNextPrayerAndCountsDown() {
         int[] day = {349, 781, 978, 1140, 1210};
         assertEquals(0, PrayerTimes.next(day, 300));

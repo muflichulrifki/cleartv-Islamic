@@ -285,6 +285,14 @@ final class PrayerTimes {
         return m == 0 ? "dalam " + h + " j" : "dalam " + h + " j " + m + " min";
     }
 
+    /** "Maghrib 44 menit lagi" / "Isya 1 jam 5 menit lagi" for Indonesia, "Maghrib dalam 44 min" otherwise. */
+    static String countdown(String zone, String name, int minutesLeft) {
+        if (!indonesia(zone)) return name + " " + countdown(minutesLeft);
+        int h = minutesLeft / 60, m = minutesLeft % 60;
+        if (h == 0) return name + " " + Math.max(1, m) + " menit lagi";
+        return name + " " + h + " jam" + (m == 0 ? "" : " " + m + " menit") + " lagi";
+    }
+
     /** "05:49" in 24-hour time, "5:49" in 12-hour time (the clock beside it says AM or PM). */
     static String format(int minutes, boolean is24) {
         int h = minutes / 60, m = minutes % 60;
