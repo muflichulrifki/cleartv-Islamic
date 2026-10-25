@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
   pull_request:
@@ -44,6 +45,11 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew --no-daemon testReleaseUnitTest assembleRelease
+      - name: Upload the APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: clear-tv-islamic-apk
+          path: launcher/app/build/outputs/apk/release/app-release.apk
       - name: The launcher stays small
         run: |
           size=$(stat -c %s launcher/app/build/outputs/apk/release/app-release.apk)
