@@ -2,5 +2,8 @@
   "prayer_zone": "ID:Jawa Timur:Kab. Sidoarjo",
   "hijri_offset": 0,
   "azan": true,
+  "azan_over_apps": true,
+  "masjid_home": true,
+  "background_color": "#03140E",
   "reduced_motion": true
 }
