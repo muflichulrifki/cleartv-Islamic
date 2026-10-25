@@ -25,6 +25,34 @@ public class PrayerTimesTest {
     }
 
     @Test
+    public void readsIndonesianZones() {
+        String zone = "ID:Jawa Timur:Kab. Sidoarjo";
+        assertEquals(true, PrayerTimes.indonesia(zone));
+        assertEquals(false, PrayerTimes.indonesia("TRG04"));
+        assertEquals("Jawa Timur", PrayerTimes.region(zone)[0]);
+        assertEquals("Kab. Sidoarjo", PrayerTimes.region(zone)[1]);
+        assertEquals(null, PrayerTimes.region("ID:Jawa Timur"));
+        assertEquals("solat-ID_Jawa_Timur_Kab_Sidoarjo.json", PrayerTimes.fileName(zone));
+        assertEquals("solat-TRG04.json", PrayerTimes.fileName("TRG04"));
+        assertEquals("Dzuhur", PrayerTimes.names(zone)[1]);
+        assertEquals("Zohor", PrayerTimes.names("TRG04")[1]);
+    }
+
+    @Test
+    public void readsEquranDatesAndHijri() {
+        assertEquals("25-Oct-2026", PrayerTimes.isoToDate("2026-10-25"));
+        for (int m = 1; m <= 12; m++) {
+            String iso = String.format(java.util.Locale.ROOT, "2026-%02d-15", m);
+            assertEquals(String.format(java.util.Locale.ROOT, "15-%02d-2026", m),
+                    PrayerTimes.dateKey(PrayerTimes.isoToDate(iso)));
+        }
+        assertEquals("", PrayerTimes.isoToDate("bukan tanggal"));
+        assertEquals(226, PrayerTimes.minutes("03:46"));
+        assertEquals("14 Jumadil Awal 1448", PrayerTimes.hijriId(PrayerTimes.isoToHijri("2026-10-25", 0)));
+        assertEquals("13 Jumadil Awal 1448", PrayerTimes.hijriId(PrayerTimes.isoToHijri("2026-10-25", -1)));
+    }
+
+    @Test
     public void findsTheNextPrayerAndCountsDown() {
         int[] day = {349, 781, 978, 1140, 1210};
         assertEquals(0, PrayerTimes.next(day, 300));

@@ -164,6 +164,7 @@ final class Config {
             networkPill = bool(json, "show_network_pill", networkPill);
             liveTvRow = bool(json, "show_live_tv", liveTvRow);
             prayerZone = string(json, "prayer_zone", prayerZone);
+            PrayerTimes.hijriOffset = integer(json, "hijri_offset", 0, -2, 2);
             azan = bool(json, "azan", azan);
             masjidHome = bool(json, "masjid_home", masjidHome);
             azanOverlay = bool(json, "azan_over_apps", azanOverlay);
@@ -194,7 +195,9 @@ final class Config {
         return new Config(dock, hidden, liveTv, liveTvAction, panelService, panelAction, inputAction,
                 Math.max(1, columns), Math.max(0, rowsBelow), shamsi, moduleCards, reducedMotion,
                 vpn, homeSettings, networkPill, liveTvRow, background, wallpaper, wallpapers, wallpaperIntervalMs,
-                places, cacheCleanDays, prayerZone.toUpperCase(java.util.Locale.ROOT), azan, masjidHome, azanOverlay, applied);
+                places, cacheCleanDays,
+                // JAKIM zones are codes ("trg04" works too); Indonesian names must reach equran.id as written.
+                PrayerTimes.indonesia(prayerZone) ? prayerZone : prayerZone.toUpperCase(java.util.Locale.ROOT), azan, masjidHome, azanOverlay, applied);
     }
 
     /** Reads and parses the overlay; any problem means "no overlay", never a crash on the home screen. */

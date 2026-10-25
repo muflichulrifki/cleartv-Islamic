@@ -77,7 +77,7 @@ public class AzanOverlay extends Service {
         }
         show(cfg.prayerZone, index);
         play(index);
-        Log.i(TAG, "azan " + PrayerTimes.NAMES[index] + " over another app");
+        Log.i(TAG, "azan " + PrayerTimes.names(cfg.prayerZone)[index] + " over another app");
         return START_NOT_STICKY;
     }
 
@@ -105,7 +105,7 @@ public class AzanOverlay extends Service {
                 + (is24 ? "" : today.minutes[index] < 12 * 60 ? " AM" : " PM") : "";
         String line = today == null || today.hijri.isEmpty() ? time : time + "   ·   " + today.hijri;
         wm = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
-        band = new Band(this, PrayerTimes.NAMES[index], line);
+        band = new Band(this, PrayerTimes.names(zone)[index], line);
         int h = getResources().getDisplayMetrics().heightPixels;
         WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT, Math.round(h * 0.34f),

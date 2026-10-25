@@ -16,11 +16,19 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.time.chrono.HijrahDate;
+import java.time.temporal.ChronoField;
 import java.util.Calendar;
 import java.util.Locale;
 
 /**
- * Malaysian prayer times from JAKIM's e-Solat, for the zone a theme names ("prayer_zone": "TRG04").
+ * Prayer times for the zone a theme names, from one of two sources:
+ * <ul>
+ * <li>Malaysia: JAKIM's e-Solat, for a JAKIM zone ("prayer_zone": "TRG04").</li>
+ * <li>Indonesia: Bimas Islam Kemenag RI through equran.id, for a province and regency or city
+ * ("prayer_zone": "ID:Jawa Timur:Kab. Sidoarjo", the names exactly as equran.id lists them).</li>
+ * </ul>
  * The whole year is fetched once and kept on disk, so the row under the clock needs the network only
  * when a new year starts. Every failure leaves the row as it was; a failed fetch is tried again an
  * hour later.
@@ -28,13 +36,69 @@ import java.util.Locale;
 final class PrayerTimes {
     private static final String TAG = "TvHome.Solat";
     private static final long RETRY_MS = 60L * 60 * 1000;
-    /** JAKIM's keys, in the order the row shows them. */
+    /** JAKIM's keys, in the order the row shows them. Kemenag's days are stored under the same keys. */
     private static final String[] KEYS = {"fajr", "dhuhr", "asr", "maghrib", "isha"};
     static final String[] NAMES = {"Subuh", "Zohor", "Asar", "Maghrib", "Isyak"};
+    /** The same five prayers as Indonesians write them. */
+    static final String[] NAMES_ID = {"Subuh", "Dzuhur", "Ashar", "Maghrib", "Isya"};
     /** Month abbreviations as e-Solat writes them in its dates ("21-Okt-2026"). */
     private static final String[] MONTHS = {"jan", "feb", "mac", "apr", "mei", "jun", "jul", "ogo", "sep", "okt", "nov", "dis"};
+    private static final String[] EN_MONTHS = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
     private static final String[] HIJRI_MONTHS = {"Muharram", "Safar", "Rabiulawal", "Rabiulakhir", "Jamadilawal",
             "Jamadilakhir", "Rejab", "Syaaban", "Ramadan", "Syawal", "Zulkaedah", "Zulhijjah"};
+    private static final String[] HIJRI_MONTHS_ID = {"Muharram", "Safar", "Rabiul Awal", "Rabiul Akhir", "Jumadil Awal",
+            "Jumadil Akhir", "Rajab", "Syakban", "Ramadan", "Syawal", "Zulkaidah", "Zulhijah"};
+    /** equran.id's monthly schedule (POST provinsi, kabkota, bulan, tahun); data from Bimas Islam Kemenag RI. */
+    private static final String EQURAN = "https://equran.id/api/v2/shalat";
+
+    /** True for an Indonesian zone, "ID:<provinsi>:<kabkota>". */
+    static boolean indonesia(String zone) {
+        return zone != null && zone.regionMatches(true, 0, "ID:", 0, 3);
+    }
+
+    /** The five names the row, the screensaver and the azan show for this zone. */
+    static String[] names(String zone) {
+        return indonesia(zone) ? NAMES_ID : NAMES;
+    }
+
+    /** "ID:Jawa Timur:Kab. Sidoarjo" to {"Jawa Timur", "Kab. Sidoarjo"}; null when it is not that form. */
+    static String[] region(String zone) {
+        if (!indonesia(zone)) return null;
+        int c = zone.indexOf(':', 3);
+        if (c < 0) return null;
+        String prov = zone.substring(3, c).trim(), kab = zone.substring(c + 1).trim();
+        return prov.isEmpty() || kab.isEmpty() ? null : new String[]{prov, kab};
+    }
+
+    /** The cache file's name: "solat-TRG04.json", "solat-ID_Jawa_Timur_Kab_Sidoarjo.json". */
+    static String fileName(String zone) {
+        return "solat-" + zone.replaceAll("[^A-Za-z0-9]+", "_") + ".json";
+    }
+
+    /** "2026-10-25" to "25-Oct-2026", the form {@link #dateKey} reads; "" when it is not a date. */
+    static String isoToDate(String ymd) {
+        try {
+            LocalDate d = LocalDate.parse(ymd.trim());
+            return String.format(Locale.ROOT, "%02d-%s-%04d", d.getDayOfMonth(), EN_MONTHS[d.getMonthValue() - 1], d.getYear());
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    /**
+     * "2026-10-25" to its Hijri date as "1448-05-14" (Umm al-Qura calendar, plus {@code offsetDays});
+     * "" when it is not a date. Kemenag's own Hijri date can be a day apart; a theme corrects that
+     * with "hijri_offset".
+     */
+    static String isoToHijri(String ymd, int offsetDays) {
+        try {
+            HijrahDate h = HijrahDate.from(LocalDate.parse(ymd.trim()).plusDays(offsetDays));
+            return String.format(Locale.ROOT, "%04d-%02d-%02d", h.get(ChronoField.YEAR),
+                    h.get(ChronoField.MONTH_OF_YEAR), h.get(ChronoField.DAY_OF_MONTH));
+        } catch (Exception e) {
+            return "";
+        }
+    }
 
     /** One day's times, in minutes after midnight, and its Hijri date ("10 Jamadilawal 1448"). */
     static final class Day {
@@ -47,12 +111,15 @@ final class PrayerTimes {
         }
     }
 
+    /** Days added to the computed Hijri date of an Indonesian zone (theme key "hijri_offset", -2..2). Set by Config. */
+    static volatile int hijriOffset;
+
     private PrayerTimes() {
     }
 
     private static File file(Context ctx, String zone) {
         File base = Config.dir(ctx);
-        return base != null ? new File(base, "solat-" + zone + ".json") : null;
+        return base != null ? new File(base, fileName(zone)) : null;
     }
 
     /** The day of the cached year whose date is {@code key} ("21-10-2026"), or null. */
@@ -65,6 +132,11 @@ final class PrayerTimes {
             for (int k = 0; k < KEYS.length; k++) {
                 m[k] = minutes(d.optString(KEYS[k]));
                 if (m[k] < 0) return null;
+            }
+            if (indonesia(zone)) {
+                // "21-10-2026" back to "2026-10-21"; the Hijri date is worked out here so a new offset applies at once.
+                String iso = key.substring(6) + "-" + key.substring(3, 5) + "-" + key.substring(0, 2);
+                return new Day(m, hijri(isoToHijri(iso, hijriOffset), HIJRI_MONTHS_ID));
             }
             return new Day(m, hijri(d.optString("hijri")));
         }
@@ -83,10 +155,8 @@ final class PrayerTimes {
         File out = file(ctx, zone);
         if (out == null) return false;
         try {
-            byte[] body = get("https://www.e-solat.gov.my/index.php?r=esolatApi/TakwimSolat&period=year&zone="
-                    + java.net.URLEncoder.encode(zone, "UTF-8"), 512 * 1024);
-            JSONArray days = new JSONObject(new String(body, StandardCharsets.UTF_8)).optJSONArray("prayerTime");
-            if (days == null || days.length() == 0) throw new IllegalStateException("no prayerTime");
+            JSONArray days = indonesia(zone) ? fetchKemenag(zone) : fetchJakim(zone);
+            if (days == null || days.length() == 0) throw new IllegalStateException("no prayer times");
             File tmp = new File(out.getPath() + ".new");
             try (OutputStream os = new FileOutputStream(tmp)) {
                 os.write(days.toString().getBytes(StandardCharsets.UTF_8));
@@ -98,6 +168,50 @@ final class PrayerTimes {
             Log.w(TAG, "fetch failed for " + zone + ": " + e.getMessage());
             return false;
         }
+    }
+
+    /** The year's days from JAKIM e-Solat, as it sends them. */
+    private static JSONArray fetchJakim(String zone) throws Exception {
+        byte[] body = get("https://www.e-solat.gov.my/index.php?r=esolatApi/TakwimSolat&period=year&zone="
+                + java.net.URLEncoder.encode(zone, "UTF-8"), 512 * 1024);
+        return new JSONObject(new String(body, StandardCharsets.UTF_8)).optJSONArray("prayerTime");
+    }
+
+    /**
+     * This year's days from Kemenag via equran.id, one month per request, plus next January so the
+     * screensaver knows the first Subuh of the new year. Each day is stored in e-Solat's shape
+     * ({"date": "25-Oct-2026", "fajr": "03:46", ...}) so {@link #day} reads both sources alike.
+     */
+    private static JSONArray fetchKemenag(String zone) throws Exception {
+        String[] r = region(zone);
+        if (r == null) throw new IllegalStateException("prayer_zone must be ID:<provinsi>:<kabkota>");
+        int year = Calendar.getInstance().get(Calendar.YEAR);
+        JSONArray days = new JSONArray();
+        for (int i = 0; i < 13; i++) {
+            int y = year + i / 12, mon = i % 12 + 1;
+            JSONArray jadwal;
+            try {
+                String req = new JSONObject().put("provinsi", r[0]).put("kabkota", r[1])
+                        .put("bulan", mon).put("tahun", y).toString();
+                JSONObject res = new JSONObject(new String(post(EQURAN, req, 256 * 1024), StandardCharsets.UTF_8));
+                JSONObject data = res.optJSONObject("data");
+                jadwal = data != null ? data.optJSONArray("jadwal") : null;
+                if (jadwal == null || jadwal.length() == 0) throw new IllegalStateException("no jadwal for " + mon + "/" + y);
+            } catch (Exception e) {
+                if (i == 12) break; // next year may not be published yet; this year is enough
+                throw e;
+            }
+            for (int k = 0; k < jadwal.length(); k++) {
+                JSONObject d = jadwal.optJSONObject(k);
+                String date = d != null ? isoToDate(d.optString("tanggal_lengkap")) : "";
+                if (date.isEmpty()) continue;
+                days.put(new JSONObject().put("date", date)
+                        .put("fajr", d.optString("subuh")).put("dhuhr", d.optString("dzuhur"))
+                        .put("asr", d.optString("ashar")).put("maghrib", d.optString("maghrib"))
+                        .put("isha", d.optString("isya")));
+            }
+        }
+        return days;
     }
 
     /** "21-10-2026" for a calendar day, the key {@link #dateKey} gives e-Solat's dates. */
@@ -138,12 +252,21 @@ final class PrayerTimes {
 
     /** "1448-05-10" to "10 Jamadilawal 1448"; "" when it is not a date. */
     static String hijri(String ymd) {
+        return hijri(ymd, HIJRI_MONTHS);
+    }
+
+    /** "1448-05-14" to "14 Jumadil Awal 1448" with Indonesian month names. */
+    static String hijriId(String ymd) {
+        return hijri(ymd, HIJRI_MONTHS_ID);
+    }
+
+    private static String hijri(String ymd, String[] months) {
         String[] p = ymd.trim().split("-");
         if (p.length != 3) return "";
         try {
             int m = Integer.parseInt(p[1]);
             if (m < 1 || m > 12) return "";
-            return Integer.parseInt(p[2]) + " " + HIJRI_MONTHS[m - 1] + " " + Integer.parseInt(p[0]);
+            return Integer.parseInt(p[2]) + " " + months[m - 1] + " " + Integer.parseInt(p[0]);
         } catch (NumberFormatException e) {
             return "";
         }
@@ -183,11 +306,28 @@ final class PrayerTimes {
     }
 
     private static byte[] get(String url, int maxBytes) throws Exception {
+        return request(url, null, maxBytes);
+    }
+
+    private static byte[] post(String url, String json, int maxBytes) throws Exception {
+        return request(url, json, maxBytes);
+    }
+
+    /** A GET, or a POST of {@code json} when it is not null; the body when the answer is 200. */
+    private static byte[] request(String url, String json, int maxBytes) throws Exception {
         HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
         c.setConnectTimeout(15000);
         c.setReadTimeout(30000);
         c.setRequestProperty("Accept", "application/json");
         try {
+            if (json != null) {
+                c.setRequestMethod("POST");
+                c.setDoOutput(true);
+                c.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                try (OutputStream os = c.getOutputStream()) {
+                    os.write(json.getBytes(StandardCharsets.UTF_8));
+                }
+            }
             if (c.getResponseCode() != 200) throw new IllegalStateException("HTTP " + c.getResponseCode());
             try (InputStream in = c.getInputStream(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
                 byte[] buf = new byte[16 * 1024];

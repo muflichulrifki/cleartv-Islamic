@@ -1562,7 +1562,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         for (int i = 0; i < today.minutes.length; i++) {
             if (i > 0) b.append("    ");
             int start = b.length();
-            b.append(PrayerTimes.NAMES[i]).append("  ").append(PrayerTimes.format(today.minutes[i], is24));
+            b.append(PrayerTimes.names(prayerZone)[i]).append("  ").append(PrayerTimes.format(today.minutes[i], is24));
             if (i == next) {
                 b.setSpan(new android.text.style.ForegroundColorSpan(bright), start, b.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 b.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD), start, b.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
@@ -1570,7 +1570,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         b.append("     ");
         int start = b.length();
-        b.append(PrayerTimes.NAMES[next >= 0 ? next : 0]).append(" ").append(PrayerTimes.countdown(left));
+        b.append(PrayerTimes.names(prayerZone)[next >= 0 ? next : 0]).append(" ").append(PrayerTimes.countdown(left));
         b.setSpan(new android.text.style.ForegroundColorSpan(bright), start, b.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         prayerRow.setText(b);
         prayerRow.setVisibility(View.VISIBLE);

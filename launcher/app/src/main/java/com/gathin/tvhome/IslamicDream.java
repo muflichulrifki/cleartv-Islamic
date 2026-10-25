@@ -32,6 +32,10 @@ final class IslamicDream {
     private static final String[] DAYS = {"Ahad", "Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu"};
     private static final String[] MONTHS = {"Januari", "Februari", "Mac", "April", "Mei", "Jun", "Julai", "Ogos",
             "September", "Oktober", "November", "Disember"};
+    /** The same in Indonesian, for an Indonesian prayer_zone ("ID:..."). */
+    private static final String[] DAYS_ID = {"Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"};
+    private static final String[] MONTHS_ID = {"Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus",
+            "September", "Oktober", "November", "Desember"};
 
     final View content;
     private final Context ctx;
@@ -87,7 +91,7 @@ final class IslamicDream {
             TextView name = new TextView(dream), at = new TextView(dream);
             name.setTypeface(outfit);
             name.setIncludeFontPadding(false);
-            name.setText(PrayerTimes.NAMES[i]);
+            name.setText(PrayerTimes.names(zone)[i]);
             name.setGravity(android.view.Gravity.CENTER_HORIZONTAL);
             at.setGravity(android.view.Gravity.CENTER_HORIZONTAL);
             at.setTypeface(serifBold);
@@ -194,8 +198,10 @@ final class IslamicDream {
 
     private void update() {
         Calendar now = Calendar.getInstance();
-        day.setText(DAYS[now.get(Calendar.DAY_OF_WEEK) - 1]);
-        date.setText(now.get(Calendar.DAY_OF_MONTH) + " " + MONTHS[now.get(Calendar.MONTH)] + " " + now.get(Calendar.YEAR));
+        boolean id = PrayerTimes.indonesia(zone);
+        day.setText((id ? DAYS_ID : DAYS)[now.get(Calendar.DAY_OF_WEEK) - 1]);
+        date.setText(now.get(Calendar.DAY_OF_MONTH) + " " + (id ? MONTHS_ID : MONTHS)[now.get(Calendar.MONTH)]
+                + " " + now.get(Calendar.YEAR));
         PrayerTimes.Day today = PrayerTimes.day(ctx, zone, PrayerTimes.key(now));
         if (today == null) {
             hijri.setVisibility(View.GONE);
@@ -234,7 +240,7 @@ final class IslamicDream {
             PrayerTimes.Day tomorrow = PrayerTimes.day(ctx, zone, PrayerTimes.key(t));
             left = 24 * 60 - nowMin + (tomorrow != null ? tomorrow : today).minutes[0];
         }
-        next.setText(PrayerTimes.NAMES[n >= 0 ? n : 0] + " " + PrayerTimes.countdown(left));
+        next.setText(PrayerTimes.names(zone)[n >= 0 ? n : 0] + " " + PrayerTimes.countdown(left));
         next.setVisibility(View.VISIBLE);
     }
 

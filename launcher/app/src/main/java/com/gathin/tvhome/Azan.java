@@ -89,11 +89,11 @@ final class Azan {
         if (today != null && !android.text.format.DateFormat.is24HourFormat(ctx)) {
             time += today.minutes[index] < 12 * 60 ? " AM" : " PM";
         }
-        view = new AzanView(ctx, PrayerTimes.NAMES[index], time, today != null ? today.hijri : "", reducedMotion);
+        view = new AzanView(ctx, PrayerTimes.names(zone)[index], time, today != null ? today.hijri : "", reducedMotion);
         parent.addView(view, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT));
         view.start();
-        Log.i(TAG, "azan " + PrayerTimes.NAMES[index]);
+        Log.i(TAG, "azan " + PrayerTimes.names(zone)[index]);
 
         File sound = sound(ctx, index);
         if (sound == null) {

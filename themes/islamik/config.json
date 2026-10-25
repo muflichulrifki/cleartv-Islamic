@@ -1,5 +1,6 @@
 {
-  "prayer_zone": "TRG04",
+  "prayer_zone": "ID:Jawa Timur:Kab. Sidoarjo",
+  "hijri_offset": 0,
   "azan": true,
   "reduced_motion": true
 }
