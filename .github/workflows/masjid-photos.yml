@@ -1,0 +1,24 @@
+name: Foto masjid
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  photos:
+    name: Unduh foto masjid dari Wikimedia Commons
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Unduh foto
+        run: python3 tools/masjid-photos.py themes/islamik
+      - name: Simpan sebagai artefak
+        uses: actions/upload-artifact@v4
+        with:
+          name: foto-masjid
+          path: themes/islamik/masjid/
