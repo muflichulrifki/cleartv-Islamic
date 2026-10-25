@@ -923,7 +923,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         int[] card = new int[2], parent = new int[2];
         prayerRow.getLocationInWindow(card);
         ((View) heroShelf.getParent()).getLocationInWindow(parent);
-        return card[1] - parent[1] + prayerRow.getHeight() + 16 * density;
+        return card[1] - parent[1] + prayerRow.getHeight() + 12 * density;
     }
 
     private void showHero(int position, float dockTopInRoot) {
@@ -934,7 +934,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         final String where = placeName != null ? placeCountry : "";
         int color = adapter.ambientColorAt(position);
         heroBottom = dockTopInRoot - HERO_GAP_DP * density;
-        if (verse != null) verse.place(dockTopInRoot - 18 * density, belowPrayerCard());
+        if (verse != null) verse.place(dockTopInRoot - 14 * density, belowPrayerCard());
         final float y = Math.max(heroBottom - heroShelf.getHeight(), belowPrayerCard());
         boolean changed = !label.contentEquals(heroName.getText());
 

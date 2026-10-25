@@ -29,7 +29,7 @@ import java.util.Random;
 final class HomeVerse {
     private static final String TAG = "TvHome.Verse";
     static final long EVERY_MS = 5 * 60_000L;
-    private static final float[] ARABIC_SP = {26, 24, 22, 20, 18, 16};
+    private static final float[] ARABIC_SP = {26, 24, 22, 20, 19, 18, 17, 16, 15, 14};
 
     private final LinearLayout box;
     private final TextView arabic, meaning, ref;
@@ -63,7 +63,7 @@ final class HomeVerse {
         box = new LinearLayout(c);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setBackgroundResource(R.drawable.prayer_card);
-        box.setPadding(dp(20), dp(14), dp(20), dp(14));
+        box.setPadding(dp(18), dp(11), dp(18), dp(11));
         box.setVisibility(View.GONE);
         box.setFocusable(false);
 
@@ -71,7 +71,7 @@ final class HomeVerse {
         arabic.setTextColor(0xFFF6E7BE);
         arabic.setTextDirection(View.TEXT_DIRECTION_RTL);
         arabic.setGravity(Gravity.END);
-        arabic.setLineSpacing(0, 1.3f);
+        arabic.setLineSpacing(0, 1.2f);
         arabic.setShadowLayer(6 * density, 0, density, 0x99000000);
         box.addView(arabic, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT));
@@ -83,18 +83,18 @@ final class HomeVerse {
         meaning.setShadowLayer(6 * density, 0, density, 0x99000000);
         LinearLayout.LayoutParams ml = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT);
-        ml.topMargin = dp(10);
+        ml.topMargin = dp(6);
         box.addView(meaning, ml);
 
         ref = new TextView(c);
         ref.setTypeface(outfit);
         ref.setTextColor(HomePrayerCard.GOLD);
-        ref.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        ref.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         ref.setLetterSpacing(0.04f);
         ref.setGravity(Gravity.END);
         LinearLayout.LayoutParams rl = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT);
-        rl.topMargin = dp(8);
+        rl.topMargin = dp(4);
         box.addView(ref, rl);
 
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(widthPx, FrameLayout.LayoutParams.WRAP_CONTENT,
@@ -140,7 +140,7 @@ final class HomeVerse {
         for (int pass = 0; pass < 2; pass++) {
             for (float sp : ARABIC_SP) {
                 arabic.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
-                meaning.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.max(14, Math.round(sp * 0.62f)));
+                meaning.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.max(13, Math.min(16, Math.round(sp * 0.62f))));
                 h = measure();
                 if (h <= room) break;
             }

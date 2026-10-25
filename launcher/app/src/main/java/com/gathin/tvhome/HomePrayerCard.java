@@ -23,8 +23,8 @@ final class HomePrayerCard {
     private static final int WHITE_SOFT = 0xE6FFFFFF;
 
     private final LinearLayout root;
-    private final View hijriRow;
-    private final TextView hijri, countdown;
+    private final TextView head;
+    private final android.graphics.drawable.Drawable moon;
     private final LinearLayout[] cells = new LinearLayout[PrayerTimes.NAMES.length];
     private final TextView[] names = new TextView[cells.length], times = new TextView[cells.length];
     private final float density;
@@ -37,30 +37,15 @@ final class HomePrayerCard {
         Typeface serifBold = Typeface.create(Typeface.SERIF, Typeface.BOLD);
         root.removeAllViews();
 
-        // The date and the countdown, stacked at the left.
-        LinearLayout head = new LinearLayout(c);
-        head.setOrientation(LinearLayout.VERTICAL);
-        head.setGravity(Gravity.CENTER_VERTICAL);
-        LinearLayout row = new LinearLayout(c);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(Gravity.CENTER_VERTICAL);
-        ImageView moon = new ImageView(c);
-        moon.setImageResource(R.drawable.ic_crescent);
-        moon.setImageTintList(ColorStateList.valueOf(GOLD));
-        row.addView(moon, new LinearLayout.LayoutParams(dp(22), dp(22)));
-        hijri = text(c, outfit, 18, GOLD);
-        hijri.setLetterSpacing(0.02f);
-        LinearLayout.LayoutParams hl = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT);
-        hl.leftMargin = dp(8);
-        row.addView(hijri, hl);
-        hijriRow = row;
-        head.addView(row);
-        countdown = text(c, outfit, 16, WHITE_SOFT);
-        LinearLayout.LayoutParams cl = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT);
-        cl.topMargin = dp(7);
-        head.addView(countdown, cl);
+        // The date (after a gold crescent) above the countdown: one two-line text, so its width is
+        // always that of its longest line and neither line is ever clipped.
+        head = text(c, outfit, 16, WHITE_SOFT);
+        head.setSingleLine(false);
+        head.setMaxLines(2);
+        head.setLineSpacing(dp(7), 1f);
+        moon = c.getDrawable(R.drawable.ic_crescent).mutate();
+        moon.setTint(GOLD);
+        moon.setBounds(0, 0, dp(20), dp(20));
         root.addView(head);
 
         // A gold rule, then one cell per prayer.
@@ -98,9 +83,19 @@ final class HomePrayerCard {
 
     /** Fills the card: {@code next} is the index of the next prayer, -1 after Isya (tomorrow's Subuh). */
     void bind(String[] prayerNames, int[] minutes, String hijriText, int next, String countdownText, boolean is24) {
-        hijri.setText(hijriText);
-        hijriRow.setVisibility(hijriText.isEmpty() ? View.GONE : View.VISIBLE);
-        countdown.setText(countdownText);
+        android.text.SpannableStringBuilder b = new android.text.SpannableStringBuilder();
+        if (!hijriText.isEmpty()) {
+            b.append("\u00a0 ");
+            b.setSpan(new android.text.style.ImageSpan(moon, android.text.style.DynamicDrawableSpan.ALIGN_BASELINE),
+                    0, 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            int from = b.length();
+            b.append(hijriText);
+            b.setSpan(new android.text.style.ForegroundColorSpan(GOLD), from, b.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            b.setSpan(new android.text.style.AbsoluteSizeSpan(18, true), from, b.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            b.append("\n");
+        }
+        b.append(countdownText);
+        head.setText(b);
         for (int i = 0; i < cells.length; i++) {
             boolean isNext = i == next;
             names[i].setText(prayerNames[i]);
